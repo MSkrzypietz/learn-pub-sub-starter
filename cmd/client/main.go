@@ -7,8 +7,6 @@ import (
 	"github.com/bootdotdev/learn-pub-sub-starter/internal/routing"
 	amqp "github.com/rabbitmq/amqp091-go"
 	"log"
-	"os"
-	"os/signal"
 )
 
 func main() {
@@ -32,8 +30,36 @@ func main() {
 		log.Fatalf("Unable to declare and bind to queue: %v", err)
 	}
 
-	interruptSignal := make(chan os.Signal, 1)
-	signal.Notify(interruptSignal, os.Interrupt)
-	<-interruptSignal
-	fmt.Println("Received an interrupt, stopping services...")
+	gs := gamelogic.NewGameState(username)
+
+	for {
+		input := gamelogic.GetInput()
+		if len(input) == 0 {
+			continue
+		}
+
+		switch input[0] {
+		case "spawn":
+			err = gs.CommandSpawn(input)
+			if err != nil {
+				fmt.Println("Error spawning:", err)
+			}
+		case "move":
+			_, err = gs.CommandMove(input)
+			if err != nil {
+				fmt.Println("Error moving:", err)
+			}
+		case "status":
+			gs.CommandStatus()
+		case "help":
+			gamelogic.PrintClientHelp()
+		case "spam":
+			fmt.Println("Spamming not allowed yet!")
+		case "quit":
+			gamelogic.PrintQuit()
+			return
+		default:
+			fmt.Println("Unknown command")
+		}
+	}
 }
