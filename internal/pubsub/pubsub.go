@@ -14,6 +14,14 @@ const (
 	Transient
 )
 
+type AckType int
+
+const (
+	Ack AckType = iota
+	NackRequeue
+	NackDiscard
+)
+
 func PublishJSON[T any](ch *amqp.Channel, exchange, key string, val T) error {
 	data, err := json.Marshal(val)
 	if err != nil {
@@ -53,7 +61,7 @@ func DeclareAndBind(conn *amqp.Connection, exchange, queueName, key string, simp
 	return ch, queue, nil
 }
 
-func SubscribeToJSON[T any](conn *amqp.Connection, exchange, queueName, key string, simpleQueueType SimpleQueueType, handler func(T)) error {
+func SubscribeToJSON[T any](conn *amqp.Connection, exchange, queueName, key string, simpleQueueType SimpleQueueType, handler func(T) AckType) error {
 	ch, _, err := DeclareAndBind(conn, exchange, queueName, key, simpleQueueType)
 	if err != nil {
 		return err
@@ -73,8 +81,17 @@ func SubscribeToJSON[T any](conn *amqp.Connection, exchange, queueName, key stri
 				continue
 			}
 
-			handler(msg)
-			err = d.Ack(false)
+			switch handler(msg) {
+			case Ack:
+				log.Println("Responding with ack")
+				err = d.Ack(false)
+			case NackRequeue:
+				log.Println("Responding with nack requeue")
+				err = d.Nack(false, true)
+			case NackDiscard:
+				log.Println("Responding with nack discard")
+				err = d.Nack(false, false)
+			}
 			if err != nil {
 				log.Println(err)
 			}

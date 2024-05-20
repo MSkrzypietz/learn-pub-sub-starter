@@ -79,16 +79,22 @@ func main() {
 	}
 }
 
-func handlerPause(gs *gamelogic.GameState) func(state routing.PlayingState) {
-	return func(state routing.PlayingState) {
+func handlerPause(gs *gamelogic.GameState) func(state routing.PlayingState) pubsub.AckType {
+	return func(state routing.PlayingState) pubsub.AckType {
 		defer fmt.Print("> ")
+
 		gs.HandlePause(state)
+		return pubsub.Ack
 	}
 }
 
-func handlerMove(gs *gamelogic.GameState) func(move gamelogic.ArmyMove) {
-	return func(move gamelogic.ArmyMove) {
+func handlerMove(gs *gamelogic.GameState) func(move gamelogic.ArmyMove) pubsub.AckType {
+	return func(move gamelogic.ArmyMove) pubsub.AckType {
 		defer fmt.Print("> ")
-		gs.HandleMove(move)
+
+		if gs.HandleMove(move) == gamelogic.MoveOutcomeSamePlayer {
+			return pubsub.NackDiscard
+		}
+		return pubsub.Ack
 	}
 }
