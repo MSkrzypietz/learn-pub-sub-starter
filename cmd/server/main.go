@@ -24,7 +24,7 @@ func main() {
 		log.Fatalf("Unable to open channel: %v", err)
 	}
 
-	_, _, err = pubsub.DeclareAndBind(conn, routing.ExchangePerilTopic, routing.GameLogSlug, routing.GameLogSlug+".*", pubsub.Durable)
+	err = pubsub.SubscribeToGob(conn, routing.ExchangePerilTopic, routing.GameLogSlug, routing.GameLogSlug+".*", pubsub.Durable, handlerGameLogs)
 	if err != nil {
 		log.Fatalf("Unable to declare and bind to queue: %v", err)
 	}
@@ -56,4 +56,14 @@ func main() {
 			fmt.Println("Unknown command")
 		}
 	}
+}
+
+func handlerGameLogs(gl routing.GameLog) pubsub.AckType {
+	defer fmt.Print("> ")
+	err := gamelogic.WriteLog(gl)
+	if err != nil {
+		fmt.Printf("Unable to write log: %v\n", err)
+		return pubsub.NackRequeue
+	}
+	return pubsub.Ack
 }
