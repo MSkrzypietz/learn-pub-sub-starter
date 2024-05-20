@@ -109,12 +109,18 @@ func subscribe[T any](conn *amqp.Connection, exchange, queueName, key string, si
 		return err
 	}
 
+	err = ch.Qos(10, 0, true)
+	if err != nil {
+		return err
+	}
+
 	deliveries, err := ch.Consume(queueName, "", false, false, false, false, nil)
 	if err != nil {
 		return err
 	}
 
 	go func() {
+		defer ch.Close()
 		for d := range deliveries {
 			msg, err := unmarshaller(d.Body)
 			if err != nil {

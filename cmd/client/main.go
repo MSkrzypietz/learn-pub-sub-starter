@@ -7,6 +7,7 @@ import (
 	"github.com/bootdotdev/learn-pub-sub-starter/internal/routing"
 	amqp "github.com/rabbitmq/amqp091-go"
 	"log"
+	"strconv"
 	"time"
 )
 
@@ -75,7 +76,25 @@ func main() {
 		case "help":
 			gamelogic.PrintClientHelp()
 		case "spam":
-			fmt.Println("Spamming not allowed yet!")
+			if len(input) < 2 {
+				fmt.Println("Spamming requires the count as the second argument")
+				continue
+			}
+
+			count, err := strconv.Atoi(input[1])
+			if err != nil {
+				fmt.Println("Spamming requires the count to be an integer")
+				continue
+			}
+
+			for i := 0; i < count; i++ {
+				gl := routing.GameLog{
+					CurrentTime: time.Now(),
+					Message:     gamelogic.GetMaliciousLog(),
+					Username:    username,
+				}
+				pubsub.PublishGob(ch, routing.ExchangePerilTopic, routing.GameLogSlug+"."+username, gl)
+			}
 		case "quit":
 			gamelogic.PrintQuit()
 			return
